@@ -158,14 +158,18 @@ async function cargarPedidos(){
       card.className = "day-card";
       card.textContent = diaTexto;
 
-      const pedidosDia = (lastData || []).filter(p => {
+    const pedidosDia = (lastData || []).filter(p => {
   try {
-    // fecha en supabase → normalizar sin zona horaria
-    const supa = new Date(p.fecha);
-    const supaStr = supa.toISOString().slice(0,10);
+    // fecha guardada en supabase (date) — usar solo los primeros 10 caracteres
+    const supaStr = String(p.fecha).slice(0, 10);
 
-    // fecha mostrada en pantalla → normalizar igual
-    const localStr = new Date(fecha).toISOString().slice(0,10);
+    // fecha mostrada en el dashboard formateada igual
+    const f = new Date(fecha);
+    const localStr = [
+      f.getFullYear(),
+      String(f.getMonth() + 1).padStart(2, '0'),
+      String(f.getDate()).padStart(2, '0')
+    ].join('-');
 
     return supaStr === localStr;
   } catch(e){

@@ -158,20 +158,26 @@ async function cargarPedidos(){
       card.className = "day-card";
       card.textContent = diaTexto;
 
-    const pedidosDia = (lastData || []).filter(p => {
+    
+   const pedidosDia = (lastData || []).filter(p => {
   try {
-    // fecha guardada en supabase (date) — usar solo los primeros 10 caracteres
-    const supaStr = String(p.fecha).slice(0, 10);
-
-    // fecha mostrada en el dashboard formateada igual
-    const f = new Date(fecha);
-    const localStr = [
-      f.getFullYear(),
-      String(f.getMonth() + 1).padStart(2, '0'),
-      String(f.getDate()).padStart(2, '0')
+    // --- fecha REAL para ti, según tu zona ---
+    const d1 = new Date(p.fecha);
+    const supaLocal = [
+      d1.getFullYear(),
+      String(d1.getMonth() + 1).padStart(2, '0'),
+      String(d1.getDate()).padStart(2, '0')
     ].join('-');
 
-    return supaStr === localStr;
+    // --- fecha del calendario también en local ---
+    const d2 = new Date(fecha);
+    const local = [
+      d2.getFullYear(),
+      String(d2.getMonth() + 1).padStart(2, '0'),
+      String(d2.getDate()).padStart(2, '0')
+    ].join('-');
+
+    return supaLocal === local;
   } catch(e){
     return false;
   }

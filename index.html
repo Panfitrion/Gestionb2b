@@ -159,10 +159,24 @@ async function cargarPedidos(){
       card.textContent = diaTexto;
 
     
-  const pedidosDia = (lastData || []).filter(p=>{
-  try { return new Date(p.fecha).toDateString() === fecha.toDateString(); } catch(e){ return false; }
-});
+const pedidosDia = (lastData || []).filter(p => {
+  try {
+    // convertir fecha actual del calendario
+    const d = new Date(fecha);
+    const target = d.toLocaleDateString("es-MX",{weekday:"long"}).toLowerCase();
 
+    // leer los días solicitados dentro de p.dias
+    const dias = p.dias || {};
+    const diasObj = Array.isArray(dias) ? {} : dias;
+
+    // si alguno de los días del pedido coincide → marcar
+    return Object.keys(diasObj).some(k =>
+      k.toString().trim().toLowerCase() === target
+    );
+  } catch(e){
+    return false;
+  }
+});
       if(pedidosDia.length>0) card.classList.add("verde");
 
       card.addEventListener('click', () => {

@@ -159,28 +159,8 @@ async function cargarPedidos(){
       card.textContent = diaTexto;
 
     
-   const pedidosDia = (lastData || []).filter(p => {
-  try {
-    // --- fecha REAL para ti, según tu zona ---
-    const d1 = new Date(p.fecha);
-    const supaLocal = [
-      d1.getFullYear(),
-      String(d1.getMonth() + 1).padStart(2, '0'),
-      String(d1.getDate()).padStart(2, '0')
-    ].join('-');
-
-    // --- fecha del calendario también en local ---
-    const d2 = new Date(fecha);
-    const local = [
-      d2.getFullYear(),
-      String(d2.getMonth() + 1).padStart(2, '0'),
-      String(d2.getDate()).padStart(2, '0')
-    ].join('-');
-
-    return supaLocal === local;
-  } catch(e){
-    return false;
-  }
+  const pedidosDia = (lastData || []).filter(p=>{
+  try { return new Date(p.fecha).toDateString() === fecha.toDateString(); } catch(e){ return false; }
 });
 
       if(pedidosDia.length>0) card.classList.add("verde");

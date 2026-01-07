@@ -142,7 +142,10 @@ function logDebug(obj){ debugLog.style.display = 'none'; debugLog.textContent = 
 /* Cargar pedidos y renderizar días */
 async function cargarPedidos(){
   try {
-    const { data, error } = await supabase.from("pedidos").select("id,cafeteria,fecha,dias").order("fecha",{ascending:false});
+   const { data, error } = await supabase
+  .from("pedidos")
+  .select("id,cafeteria,fecha_registro,fecha_entrega,dia_entrega,dias")
+  .order("fecha_registro",{ascending:false});
     if(error){ console.error(error); logDebug("Error Supabase: "+JSON.stringify(error)); return; }
     const lastData = data || [];
     logDebug(lastData); // oculto por defecto en CSS
@@ -161,19 +164,28 @@ async function cargarPedidos(){
     
 const pedidosDia = (lastData || []).filter(p => {
   try {
-    // convertir fecha actual del calendario
-    const d = new Date(fecha);
-    const target = d.toLocaleDateString("es-MX",{weekday:"long"}).toLowerCase();
+    const targetWeekday = fecha.toLocaleDateString("es-MX",{weekday:"long"}).toLowerCase();
 
-    // leer los días solicitados dentro de p.dias
+    // 1) si existe dia_entrega (texto como "martes")
+    if (p.dia_entrega) {
+      return p.dia_entrega.toString().trim().toLowerCase() === targetWeekday;
+    }
+
+    // 2) si existe fecha_entrega (fecha completa)
+    if (p.fecha_entrega) {
+      const f = new Date(p.fecha_entrega);
+      const weekdayEntrega = f.toLocaleDateString("es-MX",{weekday:"long"}).toLowerCase();
+      return weekdayEntrega === targetWeekday;
+    }
+
+    // 3) compatibilidad vieja: usa p.dias
     const dias = p.dias || {};
     const diasObj = Array.isArray(dias) ? {} : dias;
 
-    // si alguno de los días del pedido coincide → marcar
     return Object.keys(diasObj).some(k =>
-      k.toString().trim().toLowerCase() === target
+      k.toString().trim().toLowerCase() === targetWeekday
     );
-  } catch(e){
+  } catch {
     return false;
   }
 });
@@ -268,7 +280,8 @@ function abrirModalPedido(nombre, pedidosArray){
     const cont = document.createElement('div');
     cont.className = 'detalle';
     const sub = document.createElement('h3');
-    sub.textContent = `Registro ${idx+1} — ${new Date(p.fecha).toLocaleString()}`;
+    const mostrar = p.fecha_entrega || p.dia_entrega || p.fecha_registro;
+sub.textContent = `Registro ${idx+1} — ${mostrar}`;
     cont.appendChild(sub);
 
     // Enlace a la página de la cafetería si existe

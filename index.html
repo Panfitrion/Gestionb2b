@@ -158,9 +158,20 @@ async function cargarPedidos(){
       card.className = "day-card";
       card.textContent = diaTexto;
 
-      const pedidosDia = (lastData || []).filter(p=>{
-        try { return new Date(p.fecha).toDateString() === fecha.toDateString(); } catch(e){ return false; }
-      });
+      const pedidosDia = (lastData || []).filter(p => {
+  try {
+    // fecha en supabase → normalizar sin zona horaria
+    const supa = new Date(p.fecha);
+    const supaStr = supa.toISOString().slice(0,10);
+
+    // fecha mostrada en pantalla → normalizar igual
+    const localStr = new Date(fecha).toISOString().slice(0,10);
+
+    return supaStr === localStr;
+  } catch(e){
+    return false;
+  }
+});
 
       if(pedidosDia.length>0) card.classList.add("verde");
 

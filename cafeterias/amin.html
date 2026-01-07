@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Amin</title>
+<style>
+:root{ --bg:#f5f5f5; --card:#fff; --accent:#2c3e50; --ok:#27ae60;
+--muted:#666; }
+*{box-sizing:border-box}
+body{ font-family:Arial, sans-serif; margin:0; padding:16px; background:var(--bg); color:#222; }
+h1{ color:var(--accent); margin:0 0 12px; font-size:20px; text-align:center; }
+
+
+.container{ max-width:980px; margin:0 auto; }
+.card{ background:var(--card); border-radius:10px; padding:12px; margin-bottom:12px; border:1px solid #eaeaea; box-shadow:0 6px 18px rgba(0,0,0,0.04); }
+.header{ font-weight:700; background:var(--accent); color:#fff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+
+
+.product-row{ display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.product-row span{ flex:1; font-size:15px; }
+
+
+.suc-inputs{ display:flex; gap:8px; align-items:center; }
+.suc-col{ display:flex; flex-direction:column; align-items:flex-end; min-width:84px; }
+.suc-col label{ font-size:12px; color:var(--muted); margin-bottom:4px; }
+
+
+input[type="number"]{ width:72px; padding:8px; border-radius:8px; border:1px solid #ccc; font-size:15px; text-align:right; }
+input::placeholder{ color:#bbb; }
+
+
+#enviar{ width:100%; padding:12px; border-radius:10px; border:none; background:var(--ok); color:#fff; font-size:16px; cursor:pointer; margin-top:8px; }
+#status{ margin-top:8px; font-size:14px; text-align:center; color:#333; }
+
+/* listas colapsables */
+.day-list{ display:none; overflow:hidden; transition:max-height .18s ease; max-height:0; }
+
+/* Responsive */
+@media (max-width:720px){
+  .product-row{ flex-direction:column; align-items:flex-start; gap:8px; }
+  .suc-inputs{ width:100%; justify-content:flex-start; gap:10px; }
+  .suc-col{ align-items:flex-start; min-width:0; }
+  input[type="number"]{ width:100%; max-width:160px; text-align:left; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Breck</h1>
+  <div class="card">
+    <div class="header" data-toggle="week-summary">Semana actual — pedidos por día</div>
+    <div id="dias-container"></div>
+    <button id="enviar">Enviar Pedido</button>
+    <div id="status" aria-live="polite"></div>
+    <div style="margin-top:8px;font-size:13px;color:var(--muted)">Sucursales: <strong>Bistro</strong> y <strong>Cafe</strong></div>
+  </div>
+</div>
+
+<script>
+/* CONFIG */
+const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGh6ZG9kcGFzc29tZ2d0aGlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1ODMxMTIsImV4cCI6MjA4MzE1OTExMn0.mQNeavAOItO-wTgfGVac-z91baYxsa6866HpBOZy3nM";
+const NOMBRE_CAFETERIA = "Amin";
+const PRODUCTOS = ["Croissant","Chocolatín","Croissant Almendra","Croissant Frutal","Croissant Chocolate",
+  "Chocolatín Almendrado","Galleta Chispas","Galleta Avena","Galleta Red Velvet","Galleta Doble Chocolate",
+  "Scone","Tarta Rústica","Cocada","Rol de Canela","Brownie",
+  "Panque Zanahoria","Panque Limón","Panque Plátano","Hogaza","Ciabatta"];
+const DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const SUCURSALES = ["Central"];
+const container = document.getElementById('dias-container');
+const statusEl = document.getElementById('status');
+
+/* Construir UI con listas colapsadas y inputs vacíos */
+(function buildUI(){
+  const hoy = new Date();
+  const diaSemana = hoy.getDay();
+  const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const lunes = new Date(hoy); lunes.setDate(hoy.getDate() + diffLunes);
+
+  DIAS.forEach((dia, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const header = document.createElement('div');
+    header.className = 'header day-header';
+    const fechaDia = new Date(lunes); fechaDia.setDate(lunes.getDate() + idx);
+    const opciones = { weekday: 'long', day: 'numeric', month: 'long' };
+    header.textContent = `${dia} — ${fechaDia.toLocaleDateString('es-ES', opciones)}`;
+    header.setAttribute('role','button');
+    header.setAttribute('aria-expanded','false');
+
+    const list = document.createElement('div');
+    list.className = 'day-list';
+    list.style.marginTop = '8px';
+
+    PRODUCTOS.forEach(prod => {
+      const row = document.createElement('div');
+      row.className = 'product-row';
+
+      const span = document.createElement('span');
+      span.textContent = prod;
+
+      const sucInputs = document.createElement('div');
+      sucInputs.className = 'suc-inputs';
+
+      SUCURSALES.forEach(suc => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'suc-col';
+
+        const label = document.createElement('label');
+        label.textContent = suc;
+
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.min = 0;
+        inp.value = '';                    // vacío por defecto
+        inp.placeholder = '0';
+        inp.dataset.producto = prod;
+        inp.dataset.dia = dia;
+        inp.dataset.sucursal = suc;
+        inp.setAttribute('inputmode','numeric');
+        inp.setAttribute('pattern','[0-9]*');
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(inp);
+        sucInputs.appendChild(wrapper);
+      });
+
+      row.appendChild(span);
+      row.appendChild(sucInputs);
+      list.appendChild(row);
+    });
+
+    header.addEventListener('click', () => {
+      const expanded = header.getAttribute('aria-expanded') === 'true';
+      if (expanded) {
+        list.style.maxHeight = null;
+        setTimeout(()=> list.style.display = 'none', 180);
+        header.setAttribute('aria-expanded','false');
+      } else {
+        list.style.display = 'block';
+        list.style.maxHeight = list.scrollHeight + 'px';
+        header.setAttribute('aria-expanded','true');
+      }
+    });
+
+    card.appendChild(header);
+    card.appendChild(list);
+    container.appendChild(card);
+  });
+})();
+
+/* Asegurar que todas las listas estén colapsadas al cargar */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.day-list').forEach(list => {
+    list.style.display = 'none';
+    list.style.maxHeight = null;
+  });
+  document.querySelectorAll('.day-header').forEach(h => h.setAttribute('aria-expanded','false'));
+});
+
+/* Enviar pedido: interpretar campos vacíos como 0 y limpiar inputs */
+document.getElementById('enviar').onclick = async () => {
+  statusEl.textContent = '';
+  const pedidoDias = {};
+
+  document.querySelectorAll('input[type="number"]').forEach(inp=>{
+    const dia = inp.dataset.dia;
+    const suc = inp.dataset.sucursal;
+    const prod = inp.dataset.producto;
+    const raw = (inp.value ?? '').toString().trim();
+    const cant = raw === '' ? 0 : Number(raw);
+    if (cant <= 0) return;
+    if (!pedidoDias[dia]) pedidoDias[dia] = {};
+    if (!pedidoDias[dia][suc]) pedidoDias[dia][suc] = [];
+    pedidoDias[dia][suc].push({ producto: prod, cantidad: cant });
+  });
+
+  if (Object.keys(pedidoDias).length === 0) { alert("No hay cantidades para enviar."); return; }
+
+  const pedido = {
+    cafeteria: NOMBRE_CAFETERIA,
+    fecha: new Date().toISOString(),
+    dias: pedidoDias,
+    imagenData: "",
+    imagenArchivo: `pedido_${Date.now()}.png`
+  };
+
+  try {
+    statusEl.textContent = "Enviando pedido...";
+    const res = await fetch("https://pqphzdodpassomggthid.supabase.co/rest/v1/pedidos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": API_KEY,
+        "Authorization": `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify(pedido)
+    });
+
+    if (res.ok) {
+      statusEl.textContent = "Pedido enviado correctamente.";
+      document.querySelectorAll('input[type="number"]').forEach(i => i.value = '');
+    } else {
+      const text = await res.text();
+      statusEl.textContent = "Error al enviar pedido: " + text;
+      console.error("Supabase response:", text);
+    }
+  } catch (err) {
+    statusEl.textContent = "Error de conexión: " + err;
+    console.error(err);
+  }
+};
+</script>
+</body>
+</html>
